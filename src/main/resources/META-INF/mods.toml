@@ -1,0 +1,32 @@
+modLoader="javafml"
+loaderVersion="[43,)"
+license="MIT"
+
+[[mods]]
+modId="aracnemod"
+version="${mod_version}"
+displayName="Aracne Mod"
+description='''
+Progresion aracnida por niveles: escalar paredes, patas en la espalda y transformacion completa.
+'''
+
+[[dependencies.aracnemod]]
+    modId="forge"
+    mandatory=true
+    versionRange="[43,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.aracnemod]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.19.2,1.20)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.aracnemod]]
+    modId="geckolib3"
+    mandatory=true
+    versionRange="[3.1,)"
+    ordering="NONE"
+    side="BOTH"
