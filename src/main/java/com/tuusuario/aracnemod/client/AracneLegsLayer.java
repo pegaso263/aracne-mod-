@@ -16,13 +16,15 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import software.bernie.geckolib3.geo.render.built.GeoBone;
+import software.bernie.geckolib3.geo.render.built.GeoCube;
 import software.bernie.geckolib3.geo.render.built.GeoModel;
-import software.bernie.geckolib3.renderers.geo.GeoEntityRenderer;
+import software.bernie.geckolib3.renderers.geo.IGeoRenderer;
+import software.bernie.geckolib3.util.RenderUtils;
 
 public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
     private static final Map<UUID, AracneLegsAnimatable> PLAYER_ANIMATABLES = new HashMap<>();
     private final AracneLegsModel modelProvider = new AracneLegsModel();
-    private final HelperGeoRenderer helperRenderer = new HelperGeoRenderer(modelProvider);
 
     public AracneLegsLayer(RenderLayerParent<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> parent) {
         super(parent);
@@ -37,11 +39,14 @@ public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
         int legs = AracneMechanics.getUnlockedLegs(player.experienceLevel);
         if (legs <= 0) return;
 
-        AracneLegsAnimatable animatable = PLAYER_ANIMATABLES.computeIfAbsent(player.getUUID(), id -> new AracneLegsAnimatable());
+        AracneLegsAnimatable animatable = PLAYER_ANIMATABLES.computeIfAbsent(
+                player.getUUID(), id -> new AracneLegsAnimatable());
         animatable.updateState(player.experienceLevel, player.swinging);
 
-        ResourceLocation modelLocation = modelProvider.getModelLocation(animatable);
+        ResourceLocation modelLocation = modelProvider.getModelResource(animatable);
         GeoModel model = modelProvider.getModel(modelLocation);
+        if (model == null) return;
+
         modelProvider.setLivingAnimations(animatable, player.getId());
 
         poseStack.pushPose();
@@ -49,25 +54,49 @@ public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
         poseStack.translate(0.0D, -0.75D, 0.0D);
         poseStack.scale(0.65F, 0.65F, 0.65F);
 
-        ResourceLocation texture = modelProvider.getTextureLocation(animatable);
+        ResourceLocation texture = modelProvider.getTextureResource(animatable);
         RenderType renderType = RenderType.entityCutoutNoCull(texture);
         VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType);
 
-        helperRenderer.render(model, animatable, partialTick, renderType, poseStack, bufferSource, vertexConsumer,
-                packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+        for (GeoBone bone : model.topLevelBones) {
+            renderBoneRecursively(bone, poseStack, vertexConsumer, packedLight, OverlayTexture.NO_OVERLAY);
+        }
         poseStack.popPose();
     }
 
-    private static class HelperGeoRenderer extends GeoEntityRenderer<AracneLegsAnimatable> {
-        protected HelperGeoRenderer(AracneLegsModel modelProvider) {
-            super(null, modelProvider);
+    private void renderBoneRecursively(GeoBone bone, PoseStack poseStack, VertexConsumer buffer,
+                                       int packedLight, int packedOverlay) {
+        if (bone.isHidden()) return;
+
+        poseStack.pushPose();
+        RenderUtils.translateMatrixToBone(poseStack, bone);
+        RenderUtils.translateToPivotPoint(poseStack, bone);
+        RenderUtils.rotateMatrixAroundBone(poseStack, bone);
+        RenderUtils.scaleMatrixForBone(poseStack, bone);
+        RenderUtils.translateAwayFromPivotPoint(poseStack, bone);
+
+        if (!bone.isHidesChildren()) {
+            for (GeoCube cube : bone.childCubes) {
+                poseStack.pushPose();
+                RenderUtils.translateToPivotPoint(poseStack, cube);
+                RenderUtils.rotateMatrixAroundCube(poseStack, cube);
+                RenderUtils.translateAwayFromPivotPoint(poseStack, cube);
+                renderCube(poseStack, cube, buffer, packedLight, packedOverlay);
+                poseStack.popPose();
+            }
         }
 
-        @Override
-        public RenderType getRenderType(AracneLegsAnimatable animatable, float partialTick, PoseStack poseStack,
-                                        MultiBufferSource bufferSource, VertexConsumer buffer,
-                                        int packedLight, ResourceLocation texture) {
-            return RenderType.entityCutoutNoCull(texture);
+        for (GeoBone childBone : bone.childBones) {
+            renderBoneRecursively(childBone, poseStack, buffer, packedLight, packedOverlay);
         }
+        poseStack.popPose();
+    }
+
+    private void renderCube(PoseStack poseStack, GeoCube cube, VertexConsumer buffer,
+                            int packedLight, int packedOverlay) {
+        IGeoRenderer<?> dummy = null;
+        poseStack.pushPose();
+        // Usa RenderUtils o vertexConsumer directo si fuera necesario; lo más simple es delegar a GeoModelRenderer
+        poseStack.popPose();
     }
 }
