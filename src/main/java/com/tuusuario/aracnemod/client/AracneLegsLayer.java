@@ -3,6 +3,7 @@ package com.tuusuario.aracnemod.client;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.tuusuario.aracnemod.AracneLegsAnimatable;
+import com.tuusuario.aracnemod.AracneLegsModel;
 import com.tuusuario.aracnemod.AracneMechanics;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,10 +17,12 @@ import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib3.geo.render.built.GeoModel;
+import software.bernie.geckolib3.renderers.geo.GeoEntityRenderer;
 
 public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
     private static final Map<UUID, AracneLegsAnimatable> PLAYER_ANIMATABLES = new HashMap<>();
-    private final AracneLegsRenderer legsRenderer = new AracneLegsRenderer();
+    private final AracneLegsModel modelProvider = new AracneLegsModel();
+    private final HelperGeoRenderer helperRenderer = new HelperGeoRenderer(modelProvider);
 
     public AracneLegsLayer(RenderLayerParent<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> parent) {
         super(parent);
@@ -37,21 +40,34 @@ public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
         AracneLegsAnimatable animatable = PLAYER_ANIMATABLES.computeIfAbsent(player.getUUID(), id -> new AracneLegsAnimatable());
         animatable.updateState(player.experienceLevel, player.swinging);
 
-        GeoModel model = legsRenderer.getGeoModelProvider().getModel(legsRenderer.getGeoModelProvider().getModelResource(animatable));
-        legsRenderer.getGeoModelProvider().setLivingAnimations(animatable, player.getId());
+        ResourceLocation modelLocation = modelProvider.getModelLocation(animatable);
+        GeoModel model = modelProvider.getModel(modelLocation);
+        modelProvider.setLivingAnimations(animatable, player.getId());
 
         poseStack.pushPose();
-        // Alinea las patas con la espalda del torso del jugador
         getParentModel().body.translateAndRotate(poseStack);
         poseStack.translate(0.0D, -0.75D, 0.0D);
         poseStack.scale(0.65F, 0.65F, 0.65F);
 
-        ResourceLocation texture = legsRenderer.getTextureLocation(animatable);
-        RenderType renderType = legsRenderer.getRenderType(animatable, partialTick, poseStack, bufferSource, null, packedLight, texture);
+        ResourceLocation texture = modelProvider.getTextureLocation(animatable);
+        RenderType renderType = RenderType.entityCutoutNoCull(texture);
         VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType);
 
-        legsRenderer.render(model, animatable, partialTick, renderType, poseStack, bufferSource, vertexConsumer, packedLight,
-                OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
+        helperRenderer.render(model, animatable, partialTick, renderType, poseStack, bufferSource, vertexConsumer,
+                packedLight, OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
         poseStack.popPose();
+    }
+
+    private static class HelperGeoRenderer extends GeoEntityRenderer<AracneLegsAnimatable> {
+        protected HelperGeoRenderer(AracneLegsModel modelProvider) {
+            super(null, modelProvider);
+        }
+
+        @Override
+        public RenderType getRenderType(AracneLegsAnimatable animatable, float partialTick, PoseStack poseStack,
+                                        MultiBufferSource bufferSource, VertexConsumer buffer,
+                                        int packedLight, ResourceLocation texture) {
+            return RenderType.entityCutoutNoCull(texture);
+        }
     }
 }
