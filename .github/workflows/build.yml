@@ -33,3 +33,4 @@ jobs:
           name: aracne-mod-jar
           path: build/libs/*.jar
           if-no-files-found: error
+      
