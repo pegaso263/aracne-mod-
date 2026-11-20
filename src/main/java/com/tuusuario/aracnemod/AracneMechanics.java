@@ -1,5 +1,6 @@
 package com.tuusuario.aracnemod;
 
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -20,19 +21,22 @@ public class AracneMechanics {
     }
 
     public static void tickPlayer(Player player) {
-        if (player.level.isClientSide) return;
-
         int legs = getUnlockedLegs(player.experienceLevel);
 
         // 1. Escalar paredes desde 1 pata (nivel 2+)
-        if (legs >= 1 && isTouchingWall(player)) {
+        // Se ejecuta en cliente y servidor para que el movimiento se sienta fluido al instante
+        if (legs >= 1 && player.horizontalCollision) {
             double climbSpeed = legs >= 4 ? 0.24D : 0.18D;
-            if (player.zza > 0 || player.isJumping()) {
-                Vec3 motion = player.getDeltaMovement();
+            Vec3 motion = player.getDeltaMovement();
+            if (player.isShiftKeyDown()) {
+                player.setDeltaMovement(motion.x, 0.0D, motion.z);
+            } else {
                 player.setDeltaMovement(motion.x, Math.max(motion.y, climbSpeed), motion.z);
-                player.fallDistance = 0.0F;
             }
+            player.fallDistance = 0.0F;
         }
+
+        if (player.level.isClientSide) return;
 
         // 2. Reducción de daño por caída (parcial desde 1 pata, total en 4 patas)
         if (legs >= 4) {
@@ -76,12 +80,8 @@ public class AracneMechanics {
 
         float damage = legs >= 4 ? 7.0F : 4.5F;
         for (LivingEntity target : targets) {
-            target.hurt(net.minecraft.world.damagesource.DamageSource.playerAttack(player), damage);
+            target.hurt(DamageSource.playerAttack(player), damage);
             target.knockback(0.6D, -look.x, -look.z);
         }
-    }
-
-    private static boolean isTouchingWall(Player player) {
-        return player.horizontalCollision;
     }
 }
