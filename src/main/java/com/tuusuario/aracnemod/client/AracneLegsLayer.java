@@ -18,12 +18,14 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib3.geo.render.built.GeoBone;
 import software.bernie.geckolib3.geo.render.built.GeoModel;
+import software.bernie.geckolib3.model.provider.GeoModelProvider;
 import software.bernie.geckolib3.renderers.geo.IGeoRenderer;
 
-public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> {
+public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>>
+        implements IGeoRenderer<AracneLegsAnimatable> {
+
     private static final Map<UUID, AracneLegsAnimatable> PLAYER_ANIMATABLES = new HashMap<>();
     private final AracneLegsModel modelProvider = new AracneLegsModel();
-    private final LayerGeoRenderer geoRenderer = new LayerGeoRenderer();
 
     public AracneLegsLayer(RenderLayerParent<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> parent) {
         super(parent);
@@ -53,26 +55,29 @@ public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
         poseStack.translate(0.0D, -0.75D, 0.0D);
         poseStack.scale(0.65F, 0.65F, 0.65F);
 
-        ResourceLocation texture = modelProvider.getTextureResource(animatable);
+        ResourceLocation texture = getTextureLocation(animatable);
         RenderType renderType = RenderType.entityCutoutNoCull(texture);
         VertexConsumer vertexConsumer = bufferSource.getBuffer(renderType);
 
         for (GeoBone bone : model.topLevelBones) {
-            geoRenderer.renderRecursively(bone, poseStack, vertexConsumer, packedLight,
+            renderRecursively(bone, poseStack, vertexConsumer, packedLight,
                     OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
         }
         poseStack.popPose();
     }
 
-    private class LayerGeoRenderer implements IGeoRenderer<AracneLegsAnimatable> {
-        @Override
-        public ResourceLocation getTextureLocation(AracneLegsAnimatable instance) {
-            return modelProvider.getTextureResource(instance);
-        }
+    @Override
+    public GeoModelProvider<AracneLegsAnimatable> getGeoModelProvider() {
+        return modelProvider;
+    }
 
-        @Override
-        public Integer getUniqueID(AracneLegsAnimatable animatable) {
-            return animatable.hashCode();
-        }
+    @Override
+    public ResourceLocation getTextureLocation(AracneLegsAnimatable instance) {
+        return modelProvider.getTextureResource(instance);
+    }
+
+    @Override
+    public Integer getUniqueID(AracneLegsAnimatable animatable) {
+        return animatable.hashCode();
     }
 }
