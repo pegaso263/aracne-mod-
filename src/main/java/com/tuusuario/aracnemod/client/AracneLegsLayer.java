@@ -26,6 +26,7 @@ public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
 
     private static final Map<UUID, AracneLegsAnimatable> PLAYER_ANIMATABLES = new HashMap<>();
     private final AracneLegsModel modelProvider = new AracneLegsModel();
+    private MultiBufferSource currentBufferSource;
 
     public AracneLegsLayer(RenderLayerParent<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> parent) {
         super(parent);
@@ -50,6 +51,8 @@ public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
 
         modelProvider.setLivingAnimations(animatable, player.getId());
 
+        this.currentBufferSource = bufferSource;
+
         poseStack.pushPose();
         getParentModel().body.translateAndRotate(poseStack);
         poseStack.translate(0.0D, -0.75D, 0.0D);
@@ -64,6 +67,7 @@ public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
                     OverlayTexture.NO_OVERLAY, 1.0F, 1.0F, 1.0F, 1.0F);
         }
         poseStack.popPose();
+        this.currentBufferSource = null;
     }
 
     @Override
@@ -77,7 +81,7 @@ public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
     }
 
     @Override
-    public Integer getUniqueID(AracneLegsAnimatable animatable) {
-        return animatable.hashCode();
+    public MultiBufferSource getCurrentRTB() {
+        return currentBufferSource;
     }
 }
