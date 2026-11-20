@@ -1,5 +1,6 @@
-package com.tuusuario.aracnemod;
+package com.tuusuario.aracnemod.event;
 
+import com.tuusuario.aracnemod.AracneMechanics;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
