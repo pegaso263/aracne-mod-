@@ -14,10 +14,25 @@ public class AracneLegsAnimatable implements IAnimatable {
     private final AnimationFactory factory = GeckoLibUtil.createFactory(this);
     private int playerLevel = 0;
     private boolean attacking = false;
+    private float morphProgress = 0.0F;
 
     public void updateState(int level, boolean attacking) {
         this.playerLevel = level;
         this.attacking = attacking;
+    }
+
+    public void tickMorph(boolean hasLegsUnlocked) {
+        float target = hasLegsUnlocked ? 1.0F : 0.0F;
+        float speed = 0.08F;
+        if (morphProgress < target) {
+            morphProgress = Math.min(target, morphProgress + speed);
+        } else if (morphProgress > target) {
+            morphProgress = Math.max(target, morphProgress - speed);
+        }
+    }
+
+    public float getMorphProgress() {
+        return morphProgress;
     }
 
     public int getPlayerLevel() {
@@ -28,17 +43,17 @@ public class AracneLegsAnimatable implements IAnimatable {
         AnimationController<?> controller = event.getController();
         if (attacking) {
             controller.setAnimation(new AnimationBuilder()
-                    .addAnimation("animation.aracne_legs.attack", EDefaultLoopTypes.PLAY_ONCE));
+                    .addAnimation("animation.rachnera_form.attack", EDefaultLoopTypes.PLAY_ONCE));
             return PlayState.CONTINUE;
         }
         controller.setAnimation(new AnimationBuilder()
-                .addAnimation("animation.aracne_legs.idle", EDefaultLoopTypes.LOOP));
+                .addAnimation("animation.rachnera_form.idle", EDefaultLoopTypes.LOOP));
         return PlayState.CONTINUE;
     }
 
     @Override
     public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController<>(this, "controller", 2, this::predicate));
+        data.addAnimationController(new AnimationController<>(this, "controller", 3, this::predicate));
     }
 
     @Override
