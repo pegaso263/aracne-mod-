@@ -39,11 +39,13 @@ public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
         if (player.isInvisible()) return;
 
         int legs = AracneMechanics.getUnlockedLegs(player.experienceLevel);
-        if (legs <= 0) return;
 
         AracneLegsAnimatable animatable = PLAYER_ANIMATABLES.computeIfAbsent(
                 player.getUUID(), id -> new AracneLegsAnimatable());
         animatable.updateState(player.experienceLevel, player.swinging);
+        animatable.tickMorph(legs > 0);
+
+        if (animatable.getMorphProgress() <= 0.01F) return;
 
         ResourceLocation modelLocation = modelProvider.getModelResource(animatable);
         GeoModel model = modelProvider.getModel(modelLocation);
@@ -53,10 +55,13 @@ public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
 
         this.currentBufferSource = bufferSource;
 
+        float morph = animatable.getMorphProgress();
+
         poseStack.pushPose();
         getParentModel().body.translateAndRotate(poseStack);
-        poseStack.translate(0.0D, -0.75D, 0.0D);
-        poseStack.scale(0.65F, 0.65F, 0.65F);
+        poseStack.translate(0.0D, -0.55D * morph, 0.08D * morph);
+        float scale = 0.72F * morph;
+        poseStack.scale(scale, scale, scale);
 
         ResourceLocation texture = getTextureLocation(animatable);
         RenderType renderType = RenderType.entityCutoutNoCull(texture);
