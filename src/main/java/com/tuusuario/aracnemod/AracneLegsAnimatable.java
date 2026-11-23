@@ -14,25 +14,71 @@ public class AracneLegsAnimatable implements IAnimatable {
     private final AnimationFactory factory = GeckoLibUtil.createFactory(this);
     private int playerLevel = 0;
     private boolean attacking = false;
+    private boolean moving = false;
+    private boolean climbing = false;
+    private boolean sneaking = false;
+    private float gaitPhase = 0.0F;
     private float morphProgress = 0.0F;
+    private final float[] legProgress = new float[]{0.0F, 0.0F, 0.0F, 0.0F};
 
-    public void updateState(int level, boolean attacking) {
+    public void updateMotionState(int level, boolean attacking, float speedAmount, boolean climbing, boolean sneaking) {
         this.playerLevel = level;
         this.attacking = attacking;
+        this.moving = speedAmount > 0.02F;
+        this.climbing = climbing;
+        this.sneaking = sneaking;
+
+        if (this.moving || this.climbing) {
+            float stepRate = this.climbing ? 0.34F : Math.min(0.45F, 0.14F + speedAmount * 0.45F);
+            this.gaitPhase += stepRate;
+        } else {
+            this.gaitPhase += 0.04F;
+        }
     }
 
-    public void tickMorph(boolean hasLegsUnlocked) {
-        float target = hasLegsUnlocked ? 1.0F : 0.0F;
-        float speed = 0.08F;
-        if (morphProgress < target) {
-            morphProgress = Math.min(target, morphProgress + speed);
-        } else if (morphProgress > target) {
-            morphProgress = Math.max(target, morphProgress - speed);
+    public void tickMorph(boolean transformed, int unlockedLegs) {
+        float targetAbdomen = (transformed && unlockedLegs > 0) ? 1.0F : 0.0F;
+        float speed = 0.10F;
+
+        if (morphProgress < targetAbdomen) {
+            morphProgress = Math.min(targetAbdomen, morphProgress + speed);
+        } else if (morphProgress > targetAbdomen) {
+            morphProgress = Math.max(targetAbdomen, morphProgress - speed);
+        }
+
+        for (int i = 0; i < 4; i++) {
+            float targetLeg = (transformed && (i + 1) <= unlockedLegs) ? 1.0F : 0.0F;
+            if (legProgress[i] < targetLeg) {
+                legProgress[i] = Math.min(targetLeg, legProgress[i] + speed);
+            } else if (legProgress[i] > targetLeg) {
+                legProgress[i] = Math.max(targetLeg, legProgress[i] - speed);
+            }
         }
     }
 
     public float getMorphProgress() {
         return morphProgress;
+    }
+
+    public float getLegProgress(int index) {
+        if (index < 0 || index >= legProgress.length) return 0.0F;
+        return legProgress[index];
+    }
+
+    public float getGaitPhase() {
+        return gaitPhase;
+    }
+
+    public boolean isMoving() {
+        return moving;
+    }
+
+    public boolean isClimbing() {
+        return climbing;
+    }
+
+    public boolean isSneaking() {
+        return sneaking;
     }
 
     public int getPlayerLevel() {
@@ -53,7 +99,7 @@ public class AracneLegsAnimatable implements IAnimatable {
 
     @Override
     public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController<>(this, "controller", 3, this::predicate));
+        data.addAnimationController(new AnimationController<>(this, "controller", 2, this::predicate));
     }
 
     @Override
