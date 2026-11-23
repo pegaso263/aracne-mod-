@@ -18,7 +18,6 @@ public class AracneMechanics {
     private static final UUID DAMAGE_MOD_UUID = UUID.fromString("3c7a1e20-5b8d-4f1a-8c22-9876543210fe");
     private static final Map<UUID, Boolean> TRANSFORMED_PLAYERS = new HashMap<>();
 
-    /** Aparecen una a una segun los niveles: nivel 1 = 1 pata, nivel 2 = 2, nivel 3 = 3, nivel 4+ = 4. */
     public static int getUnlockedLegs(int level) {
         if (level < 1) return 0;
         return Math.min(4, level);
@@ -40,9 +39,9 @@ public class AracneMechanics {
         boolean active = isTransformed(player);
         int legs = active ? getUnlockedLegs(player.experienceLevel) : 0;
 
-        // 1. Escalar paredes desde 1 pata (nivel 1+) cuando la transformacion esta activa
+        // Escala de paredes y agarre tipo rig/extremidad aracnida
         if (legs >= 1 && player.horizontalCollision) {
-            double climbSpeed = legs >= 4 ? 0.24D : 0.18D;
+            double climbSpeed = legs >= 4 ? 0.25D : 0.19D;
             Vec3 motion = player.getDeltaMovement();
             if (player.isShiftKeyDown()) {
                 player.setDeltaMovement(motion.x, 0.0D, motion.z);
@@ -54,14 +53,14 @@ public class AracneMechanics {
 
         if (player.level.isClientSide) return;
 
-        // 2. Reduccion de dano por caida
+        // Amortiguacion de caida progresiva
         if (legs >= 4) {
             player.fallDistance = 0.0F;
         } else if (legs >= 1 && player.fallDistance > 3.0F) {
             player.fallDistance = Math.max(0.0F, player.fallDistance - (legs * 1.5F));
         }
 
-        // 3. Velocidad pasiva desde 2 patas (nivel 2+)
+        // Velocidad de desplazamiento al desplegar extremidades (nivel 2+)
         AttributeInstance speedAttr = player.getAttribute(Attributes.MOVEMENT_SPEED);
         if (speedAttr != null) {
             speedAttr.removeModifier(SPEED_MOD_UUID);
@@ -76,15 +75,15 @@ public class AracneMechanics {
             }
         }
 
-        // 4. Bono aditivo de dano cuerpo a cuerpo (se suma al dano de la espada, nunca lo reemplaza)
+        // Bono aditivo sin sobrescribir el golpe principal de la espada
         AttributeInstance damageAttr = player.getAttribute(Attributes.ATTACK_DAMAGE);
         if (damageAttr != null) {
             damageAttr.removeModifier(DAMAGE_MOD_UUID);
             if (legs >= 3) {
-                double extraDamage = (legs >= 4) ? 4.0D : 2.0D;
+                double extraDamage = (legs >= 4) ? 3.0D : 1.5D;
                 damageAttr.addTransientModifier(new AttributeModifier(
                         DAMAGE_MOD_UUID,
-                        "Aracne legs strike bonus",
+                        "Aracne limb bonus",
                         extraDamage,
                         AttributeModifier.Operation.ADDITION
                 ));
@@ -92,7 +91,6 @@ public class AracneMechanics {
         }
     }
 
-    /** Habilidad activa (3+ patas): impulso frontal sin anular el golpe de la espada. */
     public static void triggerAttackAbility(Player player) {
         if (!isTransformed(player)) return;
         int legs = getUnlockedLegs(player.experienceLevel);
@@ -103,7 +101,6 @@ public class AracneMechanics {
         player.push(look.x * dashStrength, 0.25D, look.z * dashStrength);
         player.hurtMarked = true;
 
-        // Solo aplica dano secundario en area resetando invulnerableTime despues del golpe
         AABB hitBox = player.getBoundingBox().inflate(2.2D).expandTowards(look.scale(2.0D));
         List<LivingEntity> targets = player.level.getEntitiesOfClass(
                 LivingEntity.class,
@@ -115,7 +112,7 @@ public class AracneMechanics {
         for (LivingEntity target : targets) {
             if (target.hurtTime == 0) {
                 target.hurt(DamageSource.playerAttack(player), splashDamage);
-                target.invulnerableTime = 0; // Permite que el golpe de la espada entre completo inmediatamente
+                target.invulnerableTime = 0;
                 target.knockback(0.4D, -look.x, -look.z);
             }
         }
