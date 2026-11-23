@@ -38,12 +38,20 @@ public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
                        float ageInTicks, float netHeadYaw, float headPitch) {
         if (player.isInvisible()) return;
 
+        boolean transformed = AracneMechanics.isTransformed(player);
         int legs = AracneMechanics.getUnlockedLegs(player.experienceLevel);
+        boolean climbing = transformed && legs >= 1 && player.horizontalCollision;
 
         AracneLegsAnimatable animatable = PLAYER_ANIMATABLES.computeIfAbsent(
                 player.getUUID(), id -> new AracneLegsAnimatable());
-        animatable.updateState(player.experienceLevel, player.swinging);
-        animatable.tickMorph(legs > 0);
+        animatable.updateMotionState(
+                player.experienceLevel,
+                player.swinging,
+                limbSwingAmount,
+                climbing,
+                player.isShiftKeyDown()
+        );
+        animatable.tickMorph(transformed, legs);
 
         if (animatable.getMorphProgress() <= 0.01F) return;
 
@@ -59,7 +67,8 @@ public class AracneLegsLayer extends RenderLayer<AbstractClientPlayer, PlayerMod
 
         poseStack.pushPose();
         getParentModel().body.translateAndRotate(poseStack);
-        poseStack.translate(0.0D, -0.55D * morph, 0.08D * morph);
+        double yOffset = player.isShiftKeyDown() ? -0.45D : -0.55D;
+        poseStack.translate(0.0D, yOffset * morph, 0.08D * morph);
         float scale = 0.72F * morph;
         poseStack.scale(scale, scale, scale);
 
